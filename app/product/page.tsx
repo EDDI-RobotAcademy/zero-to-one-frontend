@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ProductList from "@/components/ProductList";
 import { Product } from "@/types/product";
 
@@ -10,6 +10,9 @@ export default function ProductPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [sortOrder, setSortOrder] = useState<"none" | "price-asc" | "price-desc">("none");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const ITEMS_PER_PAGE = 5;
 
   const sortedResults = useMemo(() => {
     if (sortOrder === "none") return searchResults;
@@ -20,6 +23,19 @@ export default function ProductPage() {
     });
     return copied;
   }, [searchResults, sortOrder]);
+
+  useEffect(() => {
+    // 검색 결과가 바뀌면 첫 페이지로 이동
+    setCurrentPage(1);
+  }, [searchResults]);
+
+  useEffect(() => {
+    // 정렬/검색 결과 변화로 총 페이지 수가 줄어든 경우 현재 페이지를 맞춰준다
+    setCurrentPage((prev) => {
+      const totalPages = Math.max(1, Math.ceil(sortedResults.length / ITEMS_PER_PAGE));
+      return Math.min(prev, totalPages);
+    });
+  }, [sortedResults]);
 
   const handleSearch = async () => {
     if (!searchKeyword.trim()) {
@@ -47,6 +63,16 @@ export default function ProductPage() {
       setIsLoading(false);
     }
   };
+
+  const paginatedResults = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return sortedResults.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentPage, sortedResults]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(sortedResults.length / ITEMS_PER_PAGE)),
+    [sortedResults]
+  );
 
   return (
     <div style={{ padding: "20px", maxWidth: "600px", margin: "0 auto" }}>
@@ -81,7 +107,43 @@ export default function ProductPage() {
       {error && <p style={{ marginTop: 12, color: "#dc2626" }}>{error}</p>}
 
       <div style={{ marginTop: "20px" }}>
-        {isLoading ? <p style={{ color: "#6b7280" }}>검색 결과를 불러오는 중...</p> : <ProductList products={sortedResults} />}
+        {isLoading ? (
+          <p style={{ color: "#6b7280" }}>검색 결과를 불러오는 중...</p>
+        ) : (
+          <>
+            <ProductList products={paginatedResults} />
+
+            {sortedResults.length > ITEMS_PER_PAGE && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  justifyContent: "center",
+                  marginTop: 16,
+                }}
+              >
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  style={{ padding: "8px 12px" }}
+                >
+                  이전
+                </button>
+                <span style={{ fontSize: 14, color: "#374151" }}>
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  style={{ padding: "8px 12px" }}
+                >
+                  다음
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
