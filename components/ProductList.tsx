@@ -7,11 +7,11 @@ type Props = {
 
 export default function ProductList({ products }: Props) {
   if (!products.length) {
-    return <p style={{ color: "#6b7280" }}>검색 결과가 없습니다.</p>
+    return <p className="text-sm text-slate-400">검색 결과가 없습니다.</p>
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className="flex flex-col gap-3">
       {products.map((product, index) => (
         <ProductCard key={`${product.info_url}-${index}`} product={product} index={index} />
       ))}
