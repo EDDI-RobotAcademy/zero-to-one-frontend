@@ -6,11 +6,20 @@ type Props = {
   params: Promise<{ Id: string }>;
 };
 
-type AnalysisData = {
-  summary: string;
-  positive_features: string;
-  negative_features: string;
+type ProductSummary = {
+  created_at: string;
   keywords: string[];
+  name: string;
+  negative_features: string;
+  positive_features: string;
+  price: string;
+  summary: string;
+  title: string;
+};
+
+type AnalysisData = {
+  pdf_url: string;
+  product_summary: ProductSummary;
 };
 
 type ProductDetail = {
@@ -27,47 +36,42 @@ export default function ProductDetailPage({ params }: Props) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchProductDetail = async () => {
+    const loadProductDetail = () => {
       try {
         setIsLoading(true);
-        // TODO: 백엔드 API 연결
-        // const res = await fetch(`/api/summary/${Id}`);
-        // const data = await res.json();
-        // setProductData(data);
 
-        // 임시 데이터
-        setProductData({
-          name: "제품명",
-          thumbnail_url: "https://via.placeholder.com/300",
-          price: 0,
-          analysis: {
-            summary:
-              "제품a는 배송이 빠르고 품질과 디자인, 성능에 대해 긍정적인 평가가 많았습니다. 포장, 설명서, 색상 오류, 불량 등 일부 아쉬운 점도 언급되었습니다. 전반적으로 만족도가 높으나 개선이 필요한 부분도 있습니다.",
-            positive_features:
-              "빠른 배송, 품질, 디자인, 성능, 고객 서비스에 대한 만족이 많았습니다.",
-            negative_features:
-              "포장 부실, 불량 제품, 색상 오류, 설명서 부족, 가격에 대한 불만이 있었습니다.",
-            keywords: ["배송", "품질", "포장", "디자인", "성능", "설명서"],
-          },
-        });
+        // sessionStorage에서 리뷰 요약 데이터 가져오기
+        const savedData = sessionStorage.getItem(`product_${Id}`);
+
+        if (!savedData) {
+          throw new Error("상품 정보를 찾을 수 없습니다. 상품 목록에서 다시 선택해주세요.");
+        }
+
+        const data: ProductDetail = JSON.parse(savedData);
+
+        if (!data.analysis) {
+          throw new Error("상품 분석 정보를 불러오지 못했습니다.");
+        }
+
+        // 화면에 렌더링
+        setProductData(data);
       } catch (err) {
         console.error(err);
-        setError("상품 정보를 불러오는 중 오류가 발생했습니다.");
+        setError(err instanceof Error ? err.message : "상품 정보를 불러오는 중 오류가 발생했습니다.");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchProductDetail();
+    loadProductDetail();
   }, [Id]);
 
   const handleDownloadPDF = () => {
-    console.log("PDF 다운로드");
-    // window.location.href = "https://your-bucket.s3.amazonaws.com/product123.pdf";
-
-    //  const res = await fetch(`/api/pdf/signed-url?productId=${Id}`);
-    //  const { url } = await res.json();
-    // window.location.href = url;
+    if (productData?.analysis?.pdf_url) {
+      window.location.href = productData.analysis.pdf_url;
+    } else {
+      console.error("PDF URL이 없습니다.");
+    }
   };
 
   if (isLoading) {
@@ -157,7 +161,7 @@ export default function ProductDetailPage({ params }: Props) {
               요약
             </h3>
             <p className="text-slate-300 leading-relaxed">
-              {productData.analysis.summary}
+              {productData.analysis.product_summary.summary}
             </p>
           </div>
 
@@ -168,7 +172,7 @@ export default function ProductDetailPage({ params }: Props) {
               긍정적 특징
             </h3>
             <p className="text-slate-300 leading-relaxed">
-              {productData.analysis.positive_features}
+              {productData.analysis.product_summary.positive_features}
             </p>
           </div>
 
@@ -179,7 +183,7 @@ export default function ProductDetailPage({ params }: Props) {
               부정적 특징
             </h3>
             <p className="text-slate-300 leading-relaxed">
-              {productData.analysis.negative_features}
+              {productData.analysis.product_summary.negative_features}
             </p>
           </div>
 
@@ -190,7 +194,7 @@ export default function ProductDetailPage({ params }: Props) {
               키워드
             </h3>
             <div className="flex flex-wrap gap-2">
-              {productData.analysis.keywords.map((keyword, index) => (
+              {productData.analysis.product_summary.keywords.map((keyword, index) => (
                 <span
                   key={index}
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 backdrop-blur"
